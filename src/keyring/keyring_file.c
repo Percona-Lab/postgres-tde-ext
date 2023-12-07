@@ -14,7 +14,6 @@ extern keyringCache* cache;  // TODO: do not depend on cache internals
 int keyringFileParseConfiguration(json_object* configRoot)
 {
 	json_object* dataO;
-	const char* datafile;
 
 	if(!json_object_object_get_ex(configRoot, "datafile", &dataO))
 	{
@@ -22,15 +21,12 @@ int keyringFileParseConfiguration(json_object* configRoot)
 		return 0;
 	}
 
-	datafile = keyringParseStringParam(dataO);
-
-	if(datafile == NULL)
+	keyringFileDataFileName[0] = 0;
+	if(!keyringParseStringParam("datafile", dataO, keyringFileDataFileName, 512))
 	{
 		elog(ERROR, "Couldn't parse 'datafile' attribute.");
 		return 0;
 	}
-
-	strcpy(keyringFileDataFileName, datafile);
 
 	return 1;
 }

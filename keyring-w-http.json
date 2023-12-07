@@ -1,0 +1,7 @@
+{
+        'provider': 'file',
+        'datafile': {
+                'type': 'remote',
+                'url': 'http://localhost:8888/hello'
+        }
+}

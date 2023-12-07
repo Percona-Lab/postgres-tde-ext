@@ -26,6 +26,6 @@ bool keyringLoadConfiguration(const char* configFileName);
 // { type: 'remote'. url: 'http://...' }
 // If it doesn't have a type key / not remote / ... returns NULL
 // Otherwise it retuns the JSON value interpreted as a string
-const char* keyringParseStringParam(json_object* object);
+bool keyringParseStringParam(const char* name, json_object* object, char* out, long outLen);
 
 #endif // KEYRING_CONFIG_H

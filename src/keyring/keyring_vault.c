@@ -1,6 +1,6 @@
-
 #include "keyring/keyring_vault.h"
 #include "keyring/keyring_config.h"
+#include "keyring/keyring_curl.h"
 #include "pg_tde_defines.h"
 
 #include <stdio.h>
@@ -15,37 +15,10 @@ char keyringVaultUrl[128];
 char keyringVaultCaPath[256];
 char keyringVaultMountPath[128];
 
-CURL* curl = NULL;
 struct curl_slist *curlList = NULL;
 
-typedef struct curlString {
-  char *ptr;
-  size_t len;
-} curlString;
-
-static size_t writefunc(void *ptr, size_t size, size_t nmemb, struct curlString *s)
+static bool curlSetupToken()
 {
-  size_t new_len = s->len + size*nmemb;
-  s->ptr = repalloc(s->ptr, new_len+1);
-  if (s->ptr == NULL) {
-    exit(EXIT_FAILURE);
-  }
-  memcpy(s->ptr+s->len, ptr, size*nmemb);
-  s->ptr[new_len] = '\0';
-  s->len = new_len;
-
-  return size*nmemb;
-}
-
-static bool curlSetupSession(const char* url, curlString* str)
-{
-	if(curl == NULL)
-	{
-		curl = curl_easy_init();
-
-		if(curl == NULL) return 0;
-	}
-
 	if(curlList == NULL)
 	{
 		char tokenHeader[256];
@@ -59,20 +32,7 @@ static bool curlSetupSession(const char* url, curlString* str)
 		if(curlList == NULL) return 0;
 	}
 
-
-	if(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, curlList) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 1) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL) != CURLE_OK) return 0;
-	if(strlen(keyringVaultCaPath) > 0 && curl_easy_setopt(
-            curl, CURLOPT_CAINFO, keyringVaultCaPath) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT, 3) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_HTTP_VERSION,(long)CURL_HTTP_VERSION_1_1) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION,writefunc) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_WRITEDATA,str) != CURLE_OK) return 0;
-	if(curl_easy_setopt(curl, CURLOPT_URL, url) != CURLE_OK) return 0;
+	if(curl_easy_setopt(keyringCurl, CURLOPT_HTTPHEADER, curlList) != CURLE_OK) return 0;
 
 	return 1;
 }
@@ -89,19 +49,16 @@ static bool curlPerform(const char* url, curlString* outStr, long* httpCode, con
 	outStr->ptr = palloc0(1);
 	outStr->len = 0;
 
-	if(!curlSetupSession(url, outStr)) return 0;
+	if(!curlSetupSession(url, keyringVaultCaPath, outStr)) return 0;
+	if(!curlSetupToken()) return 0;
 
 	if(postData != NULL)
 	{
-		if(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, postData) != CURLE_OK) return 0;
-	} else
-	{
-		if(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, NULL) != CURLE_OK) return 0;
-		if(curl_easy_setopt(curl, CURLOPT_POST, 0) != CURLE_OK) return 0;
+		if(curl_easy_setopt(keyringCurl, CURLOPT_POSTFIELDS, postData) != CURLE_OK) return 0;
 	}
 
-	if(curl_easy_perform(curl) != CURLE_OK) return 0;
-	if(curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, httpCode) != CURLE_OK) return 0;
+	if(curl_easy_perform(keyringCurl) != CURLE_OK) return 0;
+	if(curl_easy_getinfo(keyringCurl, CURLINFO_RESPONSE_CODE, httpCode) != CURLE_OK) return 0;
 
 #if KEYRING_DEBUG
 	elog(DEBUG2, "Vault response [%li] '%s'", *httpCode, outStr->ptr != NULL ? outStr->ptr : "");
@@ -120,7 +77,6 @@ int keyringVaultPreloadCache(void)
 static bool keyringConfigExtractParameter(json_object* configRoot, const char* name, char* out, unsigned outMaxLen, bool optional)
 {
 	json_object* dataO;
-	const char* stringData;
 
 	if(!json_object_object_get_ex(configRoot, name, &dataO))
 	{
@@ -131,9 +87,8 @@ static bool keyringConfigExtractParameter(json_object* configRoot, const char* n
 		return 0;
 	}
 
-	stringData = keyringParseStringParam(dataO);
-
-	if(stringData == NULL)
+	out[0] = 0;
+	if(!keyringParseStringParam(name, dataO, out, outMaxLen-1))
 	{
 		if(!optional)
 		{
@@ -141,13 +96,6 @@ static bool keyringConfigExtractParameter(json_object* configRoot, const char* n
 		}
 		return 0;
 	}
-
-	if(strlen(stringData) > outMaxLen-1)
-	{
-		elog(WARNING, "Attribute '%s' is too long, maximum is %u, truncated.", name, outMaxLen);
-	}
-
-	strncpy(out, stringData, outMaxLen-1);
 
 	return 1;
 }

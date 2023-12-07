@@ -24,7 +24,7 @@ jobs:
         run: |
           sudo apt-get install -y libreadline6-dev systemtap-sdt-dev wget \
             zlib1g-dev libssl-dev libpam0g-dev bison flex libipc-run-perl \
-            libjson-c-dev libcurl4-openssl-dev
+            libjson-c-dev libcurl4-openssl-dev libhttp-server-simple-perl
           sudo /usr/bin/perl -MCPAN -e 'install IPC::RUN'
           sudo /usr/bin/perl -MCPAN -e 'install Text::Trim'
 
@@ -62,7 +62,7 @@ jobs:
             sudo tee -a /etc/postgresql/16/main/postgresql.conf
           echo "pg_tde.keyringConfigFile = '/tmp/keyring.json'" |
             sudo tee -a /etc/postgresql/16/main/postgresql.conf
-          cp keyring.json /tmp/keyring.json
+          cp keyring* /tmp/
           sudo service postgresql start
           sudo psql -V
           sudo -u postgres bash -c 'make installcheck USE_PGXS=1'

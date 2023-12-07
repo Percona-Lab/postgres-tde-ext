@@ -68,6 +68,8 @@ extern void            pg_tde_rmgr_redo(XLogReaderState *record);
 extern void            pg_tde_rmgr_desc(StringInfo buf, XLogReaderState *record);
 extern const char *    pg_tde_rmgr_identify(uint8 info);
 
+
+/* Move this to pg_tde.c file */
 static const RmgrData pg_tde_rmgr = {
 	.rm_name = RM_TDERMGR_NAME,
 	.rm_redo = pg_tde_rmgr_redo,

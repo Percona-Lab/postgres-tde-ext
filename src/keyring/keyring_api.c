@@ -1,4 +1,4 @@
-
+// #include "access/pg_tde_tdemap.h"
 #include "keyring/keyring_api.h"
 #include "keyring/keyring_file.h"
 
@@ -105,7 +105,6 @@ const keyInfo* keyringGenerateKey(const char* internalName, unsigned keyLen)
 	int i = 1;
 	keyData kd;
 
-
 	while(keyringGetKey(keyringConstructKeyName(internalName, i)) != NULL)
 	{
 		++i;
@@ -123,3 +122,22 @@ const keyInfo* keyringGenerateKey(const char* internalName, unsigned keyLen)
 	return keyringStoreKey(keyringConstructKeyName(internalName, i), kd);
 }
 
+const keyInfo* getMasterKey(const char* internalName, int doGenerateKey, int doRaiseError)
+{
+	const keyInfo* key = NULL;
+
+	key = keyringGetLatestKey(internalName);
+
+	if (key == NULL && doGenerateKey)
+	{
+		key = keyringGenerateKey(internalName, 16);
+	}
+
+	if (key == NULL && doRaiseError)
+	{
+        ereport(ERROR,
+                (errmsg("failed to retrieve master key")));
+	}
+
+	return key;
+}

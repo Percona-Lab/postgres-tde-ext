@@ -11,6 +11,8 @@
 #define ENC_AES_H
 
 #include <stdint.h>
+#include "access/pg_tde_tdemap.h"
+#include "keyring/keyring_api.h"
 
 #define AES_BLOCK_SIZE 		        16
 #define NUM_AES_BLOCKS_IN_BATCH     100
@@ -22,5 +24,8 @@ extern void Aes128EncryptedZeroBlocks(void* ctxPtr, const unsigned char* key, ui
 /* Only used for testing */
 extern void AesEncrypt(const unsigned char* key, const unsigned char* iv, const unsigned char* in, int in_len, unsigned char* out, int* out_len);
 extern void AesDecrypt(const unsigned char* key, const unsigned char* iv, const unsigned char* in, int in_len, unsigned char* out, int* out_len);
+
+extern void AesEncryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeysData *enc_rel_key_data, size_t *enc_key_bytes);
+extern void AesDecryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeysData *enc_rel_key_data, size_t *key_bytes);
 
 #endif /*ENC_AES_H*/

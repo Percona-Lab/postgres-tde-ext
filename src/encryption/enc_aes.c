@@ -168,7 +168,7 @@ void AesEncrypt(const unsigned char* key, const unsigned char* iv, const unsigne
 }
 
 void
-AesEncryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeysData *enc_rel_key_data, size_t *enc_key_bytes)
+AesEncryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeysData **p_enc_rel_key_data, size_t *enc_key_bytes)
 {
 	size_t sz;
 	SET_IV(iv);
@@ -178,10 +178,10 @@ AesEncryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeys
 
 	sz = SizeOfRelKeysData(rel_key_data->internal_keys_len);
 
-	enc_rel_key_data = (RelKeysData *) palloc(SizeOfRelKeysData(1));
-	memcpy(enc_rel_key_data, rel_key_data, sz);
+	*p_enc_rel_key_data = (RelKeysData *) palloc(sz);
+	memcpy(*p_enc_rel_key_data, rel_key_data, sz);
 
-	AesEncrypt(master_key_info->data.data, iv, (unsigned char*)rel_key_data + SizeOfRelKeysDataHeader, INTERNAL_KEY_LEN, (unsigned char *)enc_rel_key_data + SizeOfRelKeysDataHeader, (int *)enc_key_bytes);
+	AesEncrypt(master_key_info->data.data, iv, (unsigned char*)rel_key_data + SizeOfRelKeysDataHeader, INTERNAL_KEY_LEN, (unsigned char *)(*p_enc_rel_key_data) + SizeOfRelKeysDataHeader, (int *)enc_key_bytes);
 }
 
 void AesDecrypt(const unsigned char* key, const unsigned char* iv, const unsigned char* in, int in_len, unsigned char* out, int* out_len)
@@ -190,7 +190,7 @@ void AesDecrypt(const unsigned char* key, const unsigned char* iv, const unsigne
 }
 
 void
-AesDecryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeysData *enc_rel_key_data, size_t *key_bytes)
+AesDecryptKey(const keyInfo *master_key_info, RelKeysData **p_rel_key_data, RelKeysData *enc_rel_key_data, size_t *key_bytes)
 {
 	size_t sz;
 	SET_IV(iv);
@@ -200,12 +200,12 @@ AesDecryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeys
 
 	sz = SizeOfRelKeysData(enc_rel_key_data->internal_keys_len);
 
-	rel_key_data = (RelKeysData *) MemoryContextAlloc(TopMemoryContext, sz);
+	*p_rel_key_data = (RelKeysData *) MemoryContextAlloc(TopMemoryContext, sz);
 
 	/* Fill in the structure */
-	memcpy(rel_key_data, enc_rel_key_data, sz);
+	memcpy(*p_rel_key_data, enc_rel_key_data, sz);
 
-	AesDecrypt(master_key_info->data.data, iv, (unsigned char*) enc_rel_key_data->internal_key, INTERNAL_KEY_LEN, (unsigned char *)enc_rel_key_data->internal_key, (int *)key_bytes);
+	AesDecrypt(master_key_info->data.data, iv, (unsigned char*) enc_rel_key_data->internal_key, INTERNAL_KEY_LEN, (unsigned char *)(*p_rel_key_data)->internal_key, (int *)key_bytes);
 }
 
 /*

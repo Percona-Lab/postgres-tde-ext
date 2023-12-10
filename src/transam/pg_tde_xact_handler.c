@@ -16,10 +16,12 @@
 #include "utils/elog.h"
 #include "storage/fd.h"
 #include "transam/pg_tde_xact_handler.h"
+#include "access/pg_tde_tdemap.h"
 
 typedef struct PendingMapEntryDelete
 {
     off_t   map_entry_offset;               /* map entry offset */
+    RelFileLocator rlocator;                /* main for use as relation OID */
     bool    atCommit;                       /* T=delete at commit; F=delete at abort */
     int     nestLevel;                      /* xact nesting level of request */
     struct  PendingMapEntryDelete *next;    /* linked-list link */
@@ -40,7 +42,6 @@ pg_tde_xact_callback(XactEvent event, void *arg)
         ereport(DEBUG2,
                 (errmsg("pg_tde_xact_callback: aborting transaction")));
         do_pending_deletes(false);
-
     }
     else if (event == XACT_EVENT_COMMIT)
     {
@@ -51,6 +52,8 @@ pg_tde_xact_callback(XactEvent event, void *arg)
     {
         pending_delete_cleanup();
     }
+
+    pg_tde_cleanup_path_vars();
 }
 
 void
@@ -67,11 +70,12 @@ pg_tde_subxact_callback(SubXactEvent event, SubTransactionId mySubid,
 }
 
 void
-RegisterFileForDeletion(off_t map_entry_offset, bool atCommit)
+RegisterEntryForDeletion(const RelFileLocator *rlocator, off_t map_entry_offset, bool atCommit)
 {
     PendingMapEntryDelete *pending;
     pending = (PendingMapEntryDelete *) MemoryContextAlloc(TopMemoryContext, sizeof(PendingMapEntryDelete));
     pending->map_entry_offset = map_entry_offset;
+    memcpy(&pending->rlocator, rlocator, sizeof(RelFileLocator));
     pending->atCommit = atCommit;  /* delete if abort */
     pending->nestLevel = GetCurrentTransactionNestLevel();
     pending->next = pendingDeletes;
@@ -115,7 +119,8 @@ do_pending_deletes(bool isCommit)
                 ereport(LOG,
                         (errmsg("pg_tde_xact_callback: deleting entry at offset %d",
                                 (int)(pending->map_entry_offset))));
-                /* Write to file - update the entry */
+
+                pg_tde_free_key_map_entry(&pending->rlocator, pending->map_entry_offset);
             }
 
             pfree(pending);

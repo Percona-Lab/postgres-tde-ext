@@ -52,10 +52,13 @@ typedef struct RelKeys
     struct RelKeys *next;
 } RelKeys;
 
-extern void pg_tde_delete_key_fork(Relation rel);
-extern void pg_tde_create_key_fork(const RelFileLocator *newrlocator, Relation rel);
+extern void pg_tde_delete_key_map_entry(const RelFileLocator *rlocator);
+extern void pg_tde_free_key_map_entry(const RelFileLocator *rlocator, off_t offset);
+extern void pg_tde_create_key_map_entry(const RelFileLocator *newrlocator, Relation rel);
 extern RelKeysData *pg_tde_get_keys_from_fork(const RelFileLocator *rlocator);
 extern RelKeysData *GetRelationKeys(RelFileLocator rel);
+extern void pg_tde_cleanup_path_vars(void);
+
 const char * tde_sprint_key(InternalKey *k);
 
 /* TDE XLOG resource manager */

@@ -83,6 +83,7 @@ keyName keyringConstructKeyName(const char* internalName, unsigned version)
 {
 	keyName name;
 	snprintf(name.name, sizeof(name.name), "%s-%u-%lu", internalName, version, GetSystemIdentifier());
+
 	return name;
 }
 

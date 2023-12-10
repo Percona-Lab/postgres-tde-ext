@@ -25,7 +25,7 @@ extern void Aes128EncryptedZeroBlocks(void* ctxPtr, const unsigned char* key, ui
 extern void AesEncrypt(const unsigned char* key, const unsigned char* iv, const unsigned char* in, int in_len, unsigned char* out, int* out_len);
 extern void AesDecrypt(const unsigned char* key, const unsigned char* iv, const unsigned char* in, int in_len, unsigned char* out, int* out_len);
 
-extern void AesEncryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeysData *enc_rel_key_data, size_t *enc_key_bytes);
-extern void AesDecryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeysData *enc_rel_key_data, size_t *key_bytes);
+extern void AesEncryptKey(const keyInfo *master_key_info, RelKeysData *rel_key_data, RelKeysData **p_enc_rel_key_data, size_t *enc_key_bytes);
+extern void AesDecryptKey(const keyInfo *master_key_info, RelKeysData **p_rel_key_data, RelKeysData *enc_rel_key_data, size_t *key_bytes);
 
 #endif /*ENC_AES_H*/

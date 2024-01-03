@@ -7,16 +7,16 @@ CURL* keyringCurl = NULL;
 
 static size_t writefunc(void *ptr, size_t size, size_t nmemb, struct curlString *s)
 {
-  size_t new_len = s->len + size*nmemb;
-  s->ptr = repalloc(s->ptr, new_len+1);
-  if (s->ptr == NULL) {
-    exit(EXIT_FAILURE);
-  }
-  memcpy(s->ptr+s->len, ptr, size*nmemb);
-  s->ptr[new_len] = '\0';
-  s->len = new_len;
+	size_t new_len = s->len + size*nmemb;	
+	s->ptr = repalloc(s->ptr, new_len+1);
+	if (s->ptr == NULL) {
+		exit(EXIT_FAILURE);
+	}
+	memcpy(s->ptr+s->len, ptr, size*nmemb);
+	s->ptr[new_len] = '\0';
+	s->len = new_len;
 
-  return size*nmemb;
+	return size*nmemb;
 }
 
 bool curlSetupSession(const char* url, const char* caFile, curlString* outStr)
@@ -33,8 +33,7 @@ bool curlSetupSession(const char* url, const char* caFile, curlString* outStr)
 	if(curl_easy_setopt(keyringCurl, CURLOPT_USE_SSL, CURLUSESSL_ALL) != CURLE_OK) return 0;
 	if(caFile == NULL || strlen(caFile) == 0)
 	{
-		//if(curl_easy_setopt(keyringCurl, CURLOPT_CAINFO, "") != CURLE_OK) return 0;
-		//if(curl_easy_setopt(keyringCurl, CURLSSLOPT_NATIVE_CA, 1) != CURLE_OK) return 0;
+		if(curl_easy_setopt(keyringCurl, CURLSSLOPT_NATIVE_CA, 1) != CURLE_OK) return 0;
 	} else
 	{
 		if(curl_easy_setopt(keyringCurl, CURLSSLOPT_NATIVE_CA, 0) != CURLE_OK) return 0;

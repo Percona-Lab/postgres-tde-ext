@@ -24,6 +24,7 @@ pg_tde_sources = files(
         'src/keyring/keyring_config.c',
         'src/keyring/keyring_file.c',
         'src/keyring/keyring_vault.c',
+        'src/keyring/keyring_curl.c',
         'src/keyring/keyring_api.c',
 
         'src/pg_tde.c',
@@ -84,6 +85,8 @@ tests += {
   'tap': {
     'tests': [
       't/001_basic.pl',
+      't/002_remote_config.pl',
+      't/003_file_config.pl',
     ],
   },
 }

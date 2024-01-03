@@ -26,7 +26,7 @@ jobs:
             libxml2-dev libxslt-dev xsltproc libkrb5-dev libldap2-dev \
             libsystemd-dev gettext tcl-dev libperl-dev pkg-config clang-11 \
             llvm-11 llvm-11-dev libselinux1-dev python3-dev \
-            uuid-dev liblz4-dev libjson-c-dev libcurl4-openssl-dev
+            uuid-dev liblz4-dev libjson-c-dev libcurl4-openssl-dev libhttp-server-simple-perl
           sudo /usr/bin/perl -MCPAN -e 'install IPC::RUN'
           sudo /usr/bin/perl -MCPAN -e 'install Text::Trim'
 
@@ -68,7 +68,7 @@ jobs:
             /opt/pgsql/data/postgresql.conf
           echo "pg_tde.keyringConfigFile = '/tmp/keyring.json'" >> \
             /opt/pgsql/data/postgresql.conf
-          cp src/contrib/postgres-tde-ext/keyring.json /tmp/keyring.json
+          cp src/contrib/postgres-tde-ext/keyring* /tmp/
           pg_ctl -D /opt/pgsql/data -l logfile start
 
       - name: Test postgres-tde-ext

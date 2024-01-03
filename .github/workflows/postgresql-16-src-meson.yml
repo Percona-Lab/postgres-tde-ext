@@ -27,7 +27,7 @@ jobs:
             libsystemd-dev gettext tcl-dev libperl-dev pkg-config clang-11 \
             llvm-11 llvm-11-dev libselinux1-dev python3-dev \
             uuid-dev liblz4-dev meson ninja-build libjson-c-dev \
-            gpg wget libcurl4-openssl-dev
+            gpg wget libcurl4-openssl-dev libhttp-server-simple-perl
           sudo /usr/bin/perl -MCPAN -e 'install IPC::RUN'
           sudo /usr/bin/perl -MCPAN -e 'install Text::Trim'
           wget -O- https://apt.releases.hashicorp.com/gpg | sudo gpg --dearmor -o /usr/share/keyrings/hashicorp-archive-keyring.gpg
@@ -58,7 +58,7 @@ jobs:
 
       - name: Test postgres-tde-ext with keyring_file
         run: |
-          cp ../contrib/postgres-tde-ext/keyring.json /tmp/keyring.json
+          cp ../contrib/postgres-tde-ext/keyring* /tmp/
           meson test --suite setup -v
           meson test --suite postgres-tde-ext -v --num-processes 1
         working-directory: src/build
@@ -92,6 +92,6 @@ jobs:
         with:
           name: Regressions diff and postgresql log
           path: |
-            src/build/testrun/postgres-tde-ext/regress/
+            src/build/testrun/postgres-tde-ext/
           retention-days: 3
 

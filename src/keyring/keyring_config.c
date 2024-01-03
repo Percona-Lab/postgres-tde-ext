@@ -2,6 +2,7 @@
 #include "keyring/keyring_config.h"
 #include "keyring/keyring_file.h"
 #include "keyring/keyring_vault.h"
+#include "keyring/keyring_curl.h"
 
 #include <stdio.h>
 #include <assert.h>
@@ -154,12 +155,116 @@ cleanup:
 	return ret;
 }
 
-const char* keyringParseStringParam(json_object* object)
+bool keyringParseStringParam(const char* name, json_object* object, char* out, long outLen)
 {
 	if(json_object_get_type(object) == json_type_object)
 	{
-		elog(WARNING, "Remote parameters are not yet implemented");
+		json_object* typeO;
+		const char* type;
+
+		if(!json_object_object_get_ex(object, "type", &typeO))
+		{
+			elog(ERROR, "Invalid object value for %s: Missing 'type'.", name);
+			return false;
+		}
+
+		type = json_object_get_string(typeO);
+
+		if(strncmp("remote", type, 7) == 0)
+		{
+			json_object* caO;
+			json_object* urlO;
+			const char* ca = NULL;
+			const char* url = NULL;
+
+			long httpCode;
+			curlString outStr;
+
+			if(json_object_object_get_ex(object, "ca", &caO))
+			{
+				ca = json_object_get_string(caO);
+			}
+			if(json_object_object_get_ex(object, "url", &urlO))
+			{
+				url = json_object_get_string(urlO);
+			} else
+			{
+				elog(ERROR, "Invalid remote object for %s: Missing 'url'.", name);
+				return false;
+			}
+
+			outStr.ptr = palloc0(1);
+			outStr.len = 0;
+			if(!curlSetupSession(url, ca, &outStr)) 
+			{
+				elog(ERROR, "CURL error for remote object %s", name);
+				return false;
+			}
+			if(curl_easy_perform(keyringCurl) != CURLE_OK)
+			{
+				elog(ERROR, "HTTP request error for remote object %s", name);
+				return false;
+			}
+			if(curl_easy_getinfo(keyringCurl, CURLINFO_RESPONSE_CODE, &httpCode) != CURLE_OK)
+			{
+				elog(ERROR, "HTTP error for remote object %s, HTTP code %li", name, httpCode);
+				return false;
+			}
+#if KEYRING_DEBUG
+	elog(DEBUG2, "HTTP response for config [%s] '%s'", name, outStr->ptr != NULL ? outStr->ptr : "");
+#endif
+			strncpy(out, outStr.ptr, outLen);
+			out[strcspn(out, "\r\n")] = 0;
+
+			return true;
+		}
+
+		if(strncmp("file", type, 5) == 0)
+		{
+			json_object* pathO;
+			const char* path = NULL;
+			FILE* f;
+
+			if(json_object_object_get_ex(object, "path", &pathO))
+			{
+				path = json_object_get_string(pathO);
+			} else
+			{
+				elog(ERROR, "Invalid file object for %s: Missing 'path'.", name);
+				return false;
+			}
+
+			if(access(path, R_OK) != 0)
+			{
+				elog(ERROR, "The file referenced by %s doesn't exists, or is not readable to postgres: %s", name, path);
+				return false;
+			}
+
+			f = fopen(path, "r");
+
+			if(!f)
+			{
+				elog(ERROR, "The file referenced by %s doesn't exists, or is not readable to postgres: %s", name, path);
+				return false;
+			}
+
+			fgets(out, outLen, f);
+			out[strcspn(out, "\r\n")] = 0;
+
+			fclose(f);
+
+			return true;
+		}
+
+		elog(ERROR, "Unknown type for %s: %s", name, type);
+		return false;
 	}
 
-	return json_object_get_string(object);
+	{
+		const char* string;
+		string = json_object_get_string(object);
+
+		strncpy(out, string, outLen);
+	}
+	return true;
 }

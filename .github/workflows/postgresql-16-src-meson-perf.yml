@@ -30,7 +30,7 @@ jobs:
             libsystemd-dev gettext tcl-dev libperl-dev pkg-config clang-11 \
             llvm-11 llvm-11-dev libselinux1-dev python3-dev \
             uuid-dev liblz4-dev meson ninja-build libjson-c-dev \
-            sysbench libcurl4-openssl-dev
+            sysbench libcurl4-openssl-dev libhttp-server-simple-perl
           sudo /usr/bin/perl -MCPAN -e 'install IPC::RUN'
           sudo /usr/bin/perl -MCPAN -e 'install Text::Trim'
 
@@ -58,7 +58,7 @@ jobs:
 
       - name: Test postgres-tde-ext
         run: |
-          cp ../contrib/postgres-tde-ext/keyring.json /tmp/keyring.json
+          cp ../contrib/postgres-tde-ext/keyring* /tmp/
           meson test --suite setup -v
           meson test --suite postgres-tde-ext -v --num-processes 1
         working-directory: src/build
